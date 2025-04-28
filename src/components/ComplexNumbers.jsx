@@ -21,9 +21,12 @@ const ComplexNumbers = () => {
 	const [isSecondTextShrinking, setIsSecondTextShrinking] = useState(false);
 	const [isUnzooming, setIsUnzooming] = useState(false);
 	const [isUnzoomingOthers, setIsUnzoomingOthers] = useState(false);
-	const [showNegativeOneTimes, setShowNegativeOneTimes] = useState(false);
+	const [hideAnswers, setHideAnswers] = useState([false, false, false, false, false]);
+	const [currentStep, setCurrentStep] = useState('initial'); // 'initial', 'explore', 'continue1', 'continue2'
+	const [shouldSlideRight, setShouldSlideRight] = useState(false);
 
 	const handleReset = () => {
+		setCurrentStep('initial');
 		// Reset all states to initial values
 		setIsAnimating(false);
 		setShowSqrt(false);
@@ -43,10 +46,12 @@ const ComplexNumbers = () => {
 		setIsSecondTextShrinking(false);
 		setIsUnzooming(false);
 		setIsUnzoomingOthers(false);
-		setShowNegativeOneTimes(false);
+		setHideAnswers([false, false, false, false, false]);
+		setShouldSlideRight(false);
 	};
 
 	const handleContinue = () => {
+		setCurrentStep('continue1');
 		setIsContinueShrinking(true);
 		setIsTextShrinking(true);
 		setTimeout(() => {
@@ -68,6 +73,7 @@ const ComplexNumbers = () => {
 	};
 
 	const handleContinue2 = () => {
+		setCurrentStep('continue2');
 		setIsContinue2Shrinking(true);
 		setIsSecondTextShrinking(true);
 		setTimeout(() => {
@@ -79,12 +85,16 @@ const ComplexNumbers = () => {
 			setTimeout(() => {
 				setIsUnzooming(false);
 				setIsZoomed(false);
-				setShowNegativeOneTimes(true);
+				// Add delay before sliding
+				setTimeout(() => {
+					setShouldSlideRight(true);
+				}, 300);
 			}, 600);
 		}, 500);
 	};
 
 	const handleExploreClick = () => {
+		setCurrentStep('explore');
 		setIsAnimating(true);
 		setIsExploreShrinking(true);
 		setTimeout(() => {
@@ -100,6 +110,12 @@ const ComplexNumbers = () => {
 							next[i] = true;
 							return next;
 						});
+						// Set hideAnswers for this equation at the same time
+						setHideAnswers(prev => {
+							const next = [...prev];
+							next[i] = true;
+							return next;
+						});
 					}, i * flipDelay);
 				}
 				setShowNegativeSqrt(true);
@@ -108,6 +124,42 @@ const ComplexNumbers = () => {
 				}, 5 * flipDelay + 250);
 			}, 1200);
 		}, 500); // Match fade out duration
+	};
+
+	const handleReplay = () => {
+		// First reset necessary states based on current step
+		switch (currentStep) {
+			case 'explore':
+				setIsExploreShrinking(false);
+				setShowSqrt(false);
+				setShowNegativeSqrt(false);
+				setFlippedIndices([false, false, false, false, false]);
+				setHideAnswers([false, false, false, false, false]);
+				setShowContinue(false);
+				setTimeout(() => handleExploreClick(), 100);
+				break;
+			case 'continue1':
+				setIsContinueShrinking(false);
+				setIsTextShrinking(false);
+				setShowSqrtText(true);
+				setIsZoomed(false);
+				setShowI(false);
+				setShowSecondText(false);
+				setShowContinue2(false);
+				setTimeout(() => handleContinue(), 100);
+				break;
+			case 'continue2':
+				setIsContinue2Shrinking(false);
+				setIsSecondTextShrinking(false);
+				setShowSecondText(true);
+				setIsUnzooming(false);
+				setIsZoomed(true);
+				setFlippedIndices([true, true, true, true, true]);
+				setTimeout(() => handleContinue2(), 100);
+				break;
+			default:
+				break;
+		}
 	};
 
 	return (
@@ -199,29 +251,56 @@ const ComplexNumbers = () => {
 						opacity: 1 !important;
 						transition: opacity 0.4s !important;
 					}
+					.slide-right {
+						transform: translateX(100%);
+						transition: transform 0.5s ease-out;
+					}
 				`}
 			</style>
 			<div className="p-4">
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-[#5750E3] text-sm font-medium select-none">Complex Number Explorer</h2>
-					<button
-						className="reset-button
-							bg-[#5750E3] text-white border-none rounded
-							cursor-pointer flex items-center justify-center
-							text-xs font-bold px-2 py-1 ml-auto
-							transition-colors duration-200
-							hover:bg-[#4a42c7]
-							disabled:opacity-50 disabled:cursor-not-allowed"
-						onClick={handleReset}
-						title="Reset interactive"
-						disabled={isAnimating}
-						style={{
-							fontFamily: 'system-ui, -apple-system, sans-serif',
-							lineHeight: 1,
-						}}
-					>
-						Reset
-					</button>
+					<div className="flex gap-2">
+						{/* Debug Replay button */}
+						{currentStep !== 'initial' && (
+							<button
+								className="bg-gray-500 text-white border-none rounded
+									cursor-pointer flex items-center justify-center
+									text-xs font-bold px-2 py-1
+									transition-colors duration-200
+									hover:bg-gray-600
+									disabled:opacity-50 disabled:cursor-not-allowed"
+								onClick={handleReplay}
+								title="Replay current step"
+								disabled={isAnimating}
+								style={{
+									fontFamily: 'system-ui, -apple-system, sans-serif',
+									lineHeight: 1,
+								}}
+							>
+								Replay
+							</button>
+						)}
+						{/* Existing Reset button */}
+						<button
+							className="reset-button
+								bg-[#5750E3] text-white border-none rounded
+								cursor-pointer flex items-center justify-center
+								text-xs font-bold px-2 py-1
+								transition-colors duration-200
+								hover:bg-[#4a42c7]
+								disabled:opacity-50 disabled:cursor-not-allowed"
+							onClick={handleReset}
+							title="Reset interactive"
+							disabled={isAnimating}
+							style={{
+								fontFamily: 'system-ui, -apple-system, sans-serif',
+								lineHeight: 1,
+							}}
+						>
+							Reset
+						</button>
+					</div>
 				</div>
 
 				<div className="space-y-4">
@@ -298,7 +377,7 @@ const ComplexNumbers = () => {
 											fontSize="22"
 											fill="#000"
 											style={{
-												opacity: flippedIndices[0] ? 0 : 1,
+												opacity: hideAnswers[0] ? 0 : 1,
 												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
@@ -314,7 +393,7 @@ const ComplexNumbers = () => {
 											fontSize="22"
 											fill="#000"
 											style={{
-												opacity: flippedIndices[0] && (!showI) ? 1 : 0,
+												opacity: hideAnswers[0] && !showI ? 1 : 0,
 												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
@@ -340,113 +419,82 @@ const ComplexNumbers = () => {
 									</svg>
 									{/* sqrt(4) = 2 */}
 									<svg
-										width={showNegativeOneTimes ? "125" : "80"}
+										width="80"
 										height="40"
-										viewBox={showNegativeOneTimes ? "0 0 125 40" : "0 0 80 40"}
+										viewBox="0 0 80 40"
 										fill="none"
 										xmlns="http://www.w3.org/2000/svg"
 										className={`text-animation${
 											isZoomed && !isUnzooming ? ' equation-faded zoom-in-visual' : ' equation-opaque'
-										}${isUnzooming ? ' zoom-out-visual' : ''}`}
+										}${isUnzooming ? ' zoom-out-visual' : ''}${
+											shouldSlideRight ? ' slide-right' : ''
+										}`}
 										style={{ display: 'block', overflow: 'visible' }}
 									>
-										{/* Old width radical */}
 										<polyline
 											points="2,25 8,35 16,10 60,10"
 											stroke="#000"
 											strokeWidth="3"
 											fill="none"
 											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
-										/>
-										{/* New width radical */}
-										<polyline
-											points="2,25 8,35 16,10 105,10"
-											stroke="#000"
-											strokeWidth="3"
-											fill="none"
-											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
 										/>
 										<text
-											x={showNegativeOneTimes ? "62.5" : "38"}
+											x="38"
 											y="36"
 											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[1] && !showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-4
-										</text>
-										<text
-											x="62.5"
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[1] && showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-1 × 4
-										</text>
-										<text
-											x={showNegativeOneTimes ? "62.5" : "38"}
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[1] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											4
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[1] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											= 2
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
 											fontFamily="system-ui, -apple-system, sans-serif"
 											fontWeight="bold"
 											fontSize="22"
 											fill="#000"
 											style={{
 												opacity: flippedIndices[1] ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											-4
+										</text>
+										<text
+											x="38"
+											y="36"
+											textAnchor="middle"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: flippedIndices[1] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											4
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[1] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											= 2
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[1] ? 1 : 0,
+												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
 										>
@@ -455,14 +503,16 @@ const ComplexNumbers = () => {
 									</svg>
 									{/* sqrt(9) = 3 */}
 									<svg
-										width={showNegativeOneTimes ? "125" : "80"}
+										width="80"
 										height="40"
-										viewBox={showNegativeOneTimes ? "0 0 125 40" : "0 0 80 40"}
+										viewBox="0 0 80 40"
 										fill="none"
 										xmlns="http://www.w3.org/2000/svg"
 										className={`text-animation${
 											isZoomed && !isUnzooming ? ' equation-faded zoom-in-visual' : ' equation-opaque'
-										}${isUnzooming ? ' zoom-out-visual' : ''}`}
+										}${isUnzooming ? ' zoom-out-visual' : ''}${
+											shouldSlideRight ? ' slide-right' : ''
+										}`}
 										style={{ display: 'block', overflow: 'visible' }}
 									>
 										<polyline
@@ -471,95 +521,64 @@ const ComplexNumbers = () => {
 											strokeWidth="3"
 											fill="none"
 											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
-										/>
-										<polyline
-											points="2,25 8,35 16,10 105,10"
-											stroke="#000"
-											strokeWidth="3"
-											fill="none"
-											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
 										/>
 										<text
-											x={showNegativeOneTimes ? "62.5" : "38"}
+											x="38"
 											y="36"
 											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[2] && !showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-9
-										</text>
-										<text
-											x="62.5"
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[2] && showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-1 × 9
-										</text>
-										<text
-											x={showNegativeOneTimes ? "62.5" : "38"}
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[2] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											9
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[2] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											= 3
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
 											fontFamily="system-ui, -apple-system, sans-serif"
 											fontWeight="bold"
 											fontSize="22"
 											fill="#000"
 											style={{
 												opacity: flippedIndices[2] ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											-9
+										</text>
+										<text
+											x="38"
+											y="36"
+											textAnchor="middle"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: flippedIndices[2] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											9
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[2] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											= 3
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[2] ? 1 : 0,
+												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
 										>
@@ -568,14 +587,16 @@ const ComplexNumbers = () => {
 									</svg>
 									{/* sqrt(16) = 4 */}
 									<svg
-										width={showNegativeOneTimes ? "125" : "80"}
+										width="80"
 										height="40"
-										viewBox={showNegativeOneTimes ? "0 0 125 40" : "0 0 80 40"}
+										viewBox="0 0 80 40"
 										fill="none"
 										xmlns="http://www.w3.org/2000/svg"
 										className={`text-animation${
 											isZoomed && !isUnzooming ? ' equation-faded zoom-in-visual' : ' equation-opaque'
-										}${isUnzooming ? ' zoom-out-visual' : ''}`}
+										}${isUnzooming ? ' zoom-out-visual' : ''}${
+											shouldSlideRight ? ' slide-right' : ''
+										}`}
 										style={{ display: 'block', overflow: 'visible' }}
 									>
 										<polyline
@@ -584,95 +605,64 @@ const ComplexNumbers = () => {
 											strokeWidth="3"
 											fill="none"
 											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
-										/>
-										<polyline
-											points="2,25 8,35 16,10 105,10"
-											stroke="#000"
-											strokeWidth="3"
-											fill="none"
-											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
 										/>
 										<text
-											x={showNegativeOneTimes ? "62.5" : "36"}
+											x="38"
 											y="36"
 											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[3] && !showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-16
-										</text>
-										<text
-											x="62.5"
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[3] && showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-1 × 16
-										</text>
-										<text
-											x={showNegativeOneTimes ? "62.5" : "36"}
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[3] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											16
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[3] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											= 4
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
 											fontFamily="system-ui, -apple-system, sans-serif"
 											fontWeight="bold"
 											fontSize="22"
 											fill="#000"
 											style={{
 												opacity: flippedIndices[3] ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											-16
+										</text>
+										<text
+											x="38"
+											y="36"
+											textAnchor="middle"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: flippedIndices[3] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											16
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[3] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											= 4
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[3] ? 1 : 0,
+												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
 										>
@@ -681,14 +671,16 @@ const ComplexNumbers = () => {
 									</svg>
 									{/* sqrt(25) = 5 */}
 									<svg
-										width={showNegativeOneTimes ? "125" : "80"}
+										width="80"
 										height="40"
-										viewBox={showNegativeOneTimes ? "0 0 125 40" : "0 0 80 40"}
+										viewBox="0 0 80 40"
 										fill="none"
 										xmlns="http://www.w3.org/2000/svg"
 										className={`text-animation${
 											isZoomed && !isUnzooming ? ' equation-faded zoom-in-visual' : ' equation-opaque'
-										}${isUnzooming ? ' zoom-out-visual' : ''}`}
+										}${isUnzooming ? ' zoom-out-visual' : ''}${
+											shouldSlideRight ? ' slide-right' : ''
+										}`}
 										style={{ display: 'block', overflow: 'visible' }}
 									>
 										<polyline
@@ -697,95 +689,64 @@ const ComplexNumbers = () => {
 											strokeWidth="3"
 											fill="none"
 											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
-										/>
-										<polyline
-											points="2,25 8,35 16,10 105,10"
-											stroke="#000"
-											strokeWidth="3"
-											fill="none"
-											strokeLinejoin="round"
-											style={{
-												opacity: showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)"
-											}}
 										/>
 										<text
-											x={showNegativeOneTimes ? "62.5" : "36"}
+											x="38"
 											y="36"
 											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[4] && !showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-25
-										</text>
-										<text
-											x="62.5"
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[4] && showNegativeOneTimes ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											-1 × 25
-										</text>
-										<text
-											x={showNegativeOneTimes ? "62.5" : "36"}
-											y="36"
-											textAnchor="middle"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[4] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											25
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
-											fontFamily="system-ui, -apple-system, sans-serif"
-											fontWeight="bold"
-											fontSize="22"
-											fill="#000"
-											style={{
-												opacity: flippedIndices[4] ? 0 : 1,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
-												position: "absolute"
-											}}
-										>
-											= 5
-										</text>
-										<text
-											x={showNegativeOneTimes ? "110" : "64"}
-											y="36"
 											fontFamily="system-ui, -apple-system, sans-serif"
 											fontWeight="bold"
 											fontSize="22"
 											fill="#000"
 											style={{
 												opacity: flippedIndices[4] ? 1 : 0,
-												transition: "opacity 0.5s cubic-bezier(0.4,0,0.2,1)",
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											-25
+										</text>
+										<text
+											x="38"
+											y="36"
+											textAnchor="middle"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: flippedIndices[4] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											25
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[4] ? 0 : 1,
+												transition: "opacity 0.5s",
+												position: "absolute"
+											}}
+										>
+											= 5
+										</text>
+										<text
+											x="64"
+											y="36"
+											fontFamily="system-ui, -apple-system, sans-serif"
+											fontWeight="bold"
+											fontSize="22"
+											fill="#000"
+											style={{
+												opacity: hideAnswers[4] ? 1 : 0,
+												transition: "opacity 0.5s",
 												position: "absolute"
 											}}
 										>
